@@ -1,0 +1,90 @@
+networks:
+  devtools:
+    driver: bridge
+
+services:
+  ttt-eureka:
+    image: ttt-eureka:local
+    container_name: "ttt-eureka"
+    ports:
+      - "8761:8761"
+    networks:
+      - devtools
+    healthcheck:
+      test: "curl -sf http://localhost:8761/actuator/health | jq -e '.status==\"UP\"' >/dev/null"
+      retries: 15
+      interval: 5s
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+
+  ttt-engine:
+    image: ttt-engine:local
+    container_name: "ttt-engine"
+    ports:
+      - "8082:8082"
+    networks:
+      - devtools
+    healthcheck:
+      test: "curl -sf http://localhost:8082/actuator/health | jq -e '.status==\"UP\"' >/dev/null"
+      retries: 15
+      interval: 5s
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      ttt-eureka:
+        condition: service_healthy
+
+  ttt-session:
+    image: ttt-session:local
+    container_name: "ttt-session"
+    ports:
+      - "8081:8081"
+    networks:
+      - devtools
+    healthcheck:
+      test: "curl -sf http://localhost:8081/actuator/health | jq -e '.status==\"UP\"' >/dev/null"
+      retries: 15
+      interval: 5s
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      ttt-eureka:
+        condition: service_healthy
+
+  ttt-gateway:
+    image: ttt-gateway:local
+    container_name: "ttt-gateway"
+    ports:
+      - "10000:10000"
+    networks:
+      - devtools
+    healthcheck:
+      test: "curl -sf http://localhost:10000/actuator/health | jq -e '.status==\"UP\"' >/dev/null"
+      retries: 15
+      interval: 5s
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      ttt-eureka:
+        condition: service_healthy
+      ttt-engine:
+        condition: service_healthy
+      ttt-session:
+        condition: service_healthy
+
+  ttt-ui:
+    image: ttt-ui:local
+    container_name: "ttt-ui"
+    ports:
+      - "5173:5173"
+    networks:
+      - devtools
+    depends_on:
+      ttt-gateway:
+        condition: service_healthy
+      ttt-eureka:
+        condition: service_healthy
+      ttt-engine:
+        condition: service_healthy
+      ttt-session:
+        condition: service_healthy
